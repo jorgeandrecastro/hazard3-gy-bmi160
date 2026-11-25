@@ -10,7 +10,7 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Driver async no_std pour le capteur IMU BMI160, basé sur Embassy."
-documentation = "https://docs.rs/embassy-gy-bmi160"
+documentation = "https://docs.rs/hazard3-gy-bmi160"
 readme = "README.md"
 keywords = [
     "embassy",
@@ -25,7 +25,7 @@ categories = [
     "hardware-support",
 ]
 license = "GPL-2.0-or-later"
-repository = "https://github.com/jorgeandrecastro/embassy-gy-bmi160"
+repository = "https://github.com/jorgeandrecastro/hazard3-gy-bmi160"
 
 [lib]
 name = "embassy_gy_bmi160"
