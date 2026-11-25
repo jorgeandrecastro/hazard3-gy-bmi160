@@ -1,16 +1,20 @@
 // Copyright (C) 2026 Jorge Andre Castro
 // GPL-2.0-or-later
 
-//! Signaux globaux asynchrones pour le partage de données IMU.
-//! 
-//! Utilisent des mécanismes de synchronisation `embassy-sync` 
-//! compatibles avec les interruptions (CriticalSection).
-#![forbid(unsafe_code)]
-use crate::BmiData;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+//! Single-consumer signals for sharing the latest IMU samples between tasks.
+//!
+//! The application must provide a `critical-section` implementation.
 
-/// Canal de diffusion pour la dernière mesure de l'accéléromètre.
+use crate::BmiData;
+#[cfg(all(feature = "embassy", not(feature = "hazard3")))]
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+#[cfg(feature = "hazard3")]
+use hazard3_sync_backend::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+
+/// Latest accelerometer sample.
+#[cfg(any(feature = "hazard3", feature = "embassy"))]
 pub static ACCEL_SIGNAL: Signal<CriticalSectionRawMutex, BmiData> = Signal::new();
 
-/// Canal de diffusion pour la dernière mesure du gyroscope.
+/// Latest gyroscope sample.
+#[cfg(any(feature = "hazard3", feature = "embassy"))]
 pub static GYRO_SIGNAL: Signal<CriticalSectionRawMutex, BmiData> = Signal::new();

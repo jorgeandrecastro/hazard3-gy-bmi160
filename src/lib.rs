@@ -4,41 +4,51 @@
 #![no_std]
 #![forbid(unsafe_code)]
 
-//! # embassy-gy-bmi160
+//! # hazard3-gy-bmi160
 //!
-//! Driver asynchrone `no_std` pour l'IMU Bosch BMI160 via I2C.
-//! optimisé pour l'exécuteur `embassy`.
-//! 
-//! Ce pilote fournit un accès direct aux registres de données brutes 
-//! de l'accéléromètre et du gyroscope sans surcoût de calcul.
+//! Asynchronous `no_std` I2C driver for the Bosch BMI160 IMU.
+//!
+//! The driver provides raw accelerometer and gyroscope data. Select the
+//! `hazard3` backend (default) for RP2350 RISC-V or the `embassy` backend for
+//! ARM/Cortex-M. Exactly one backend must be enabled.
+
+#[cfg(all(feature = "hazard3", feature = "embassy"))]
+compile_error!("Features `hazard3` and `embassy` are mutually exclusive.");
+
+#[cfg(not(any(feature = "hazard3", feature = "embassy")))]
+compile_error!("Enable exactly one backend: `hazard3` or `embassy`.");
+
+#[cfg(feature = "hazard3")]
+use hazard3_time_backend::Delay;
+#[cfg(all(feature = "embassy", not(feature = "hazard3")))]
+use embassy_time::Delay;
 
 pub mod signals;
 
 use core::marker::PhantomData;
-use embassy_time::Timer;
+use embedded_hal_async::delay::DelayNs;
 use embedded_hal_async::i2c::I2c;
 
-/// Données de mouvement brutes sur trois axes (X, Y, Z).
-/// Représentées par des entiers signés de 16 bits.
+/// Raw three-axis motion data (X, Y, Z), represented as signed 16-bit integers.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BmiData {
-    /// Valeur brute sur l'axe X.
+    /// Raw value for the X axis.
     pub x: i16,
-    /// Valeur brute sur l'axe Y.
+    /// Raw value for the Y axis.
     pub y: i16,
-    /// Valeur brute sur l'axe Z.
+    /// Raw value for the Z axis.
     pub z: i16,
 }
 
-/// Instance principale du driver BMI160.
-/// 
-/// Fonctionne avec n'importe quel périphérique implémentant `embedded-hal-async::i2c::I2c`.
+/// BMI160 driver instance.
+///
+/// Works with any device implementing `embedded_hal_async::i2c::I2c`.
 pub struct Bmi160<'d, I>
 where
     I: I2c,
 {
     i2c: I,
-    /// Adresse I2C configurée (0x68 ou 0x69).
+    /// Configured I2C address (0x68 or 0x69).
     pub addr: u8,
     _phantom: PhantomData<&'d ()>,
 }
@@ -47,11 +57,10 @@ impl<'d, I> Bmi160<'d, I>
 where
     I: I2c,
 {
-    /// Initialise une nouvelle instance du driver.
-    /// 
-    /// # Arguments
-    /// * `i2c` - Bus I2C (ou I2cDevice partagé).
-    /// * `addr` - Adresse du composant (généralement 0x68).
+    /// Creates a new driver instance.
+    ///
+    /// * `i2c` - I2C bus or shared I2C device.
+    /// * `addr` - Device address, usually `0x68`.
     pub fn new(i2c: I, addr: u8) -> Self {
         Self {
             i2c,
@@ -60,27 +69,37 @@ where
         }
     }
 
-    /// Met à jour l'adresse I2C dynamiquement.
+    /// Updates the I2C address.
     pub fn set_address(&mut self, new_addr: u8) {
         self.addr = new_addr;
     }
 
-    /// Configure le capteur en "Normal Mode" pour l'accéléromètre et le gyroscope.
-    /// 
-    /// Envoie les commandes PMU aux registres de contrôle d'alimentation.
+    /// Puts the accelerometer and gyroscope into normal mode.
+    ///
+    /// The application must provide a time driver for the selected backend.
+    #[cfg(any(feature = "hazard3", feature = "embassy"))]
     pub async fn init(&mut self) -> Result<(), I::Error> {
-        // Accéléromètre en mode Normal (Commande 0x11)
-        self.i2c.write(self.addr, &[0x7E, 0x11]).await?;
-        Timer::after_millis(10).await;
+        self.init_with_delay(&mut Delay).await
+    }
 
-        // Gyroscope en mode Normal (Commande 0x15)
+    /// Puts the accelerometer and gyroscope into normal mode using a
+    /// caller-provided async delay.
+    pub async fn init_with_delay<D>(&mut self, delay: &mut D) -> Result<(), I::Error>
+    where
+        D: DelayNs,
+    {
+        // Put the accelerometer into normal mode.
+        self.i2c.write(self.addr, &[0x7E, 0x11]).await?;
+        delay.delay_ms(10).await;
+
+        // Put the gyroscope into normal mode.
         self.i2c.write(self.addr, &[0x7E, 0x15]).await?;
-        Timer::after_millis(10).await;
+        delay.delay_ms(10).await;
 
         Ok(())
     }
 
-    /// Lit les données brutes du gyroscope (registres 0x0C à 0x11).
+    /// Reads raw gyroscope data from registers `0x0C` through `0x11`.
     pub async fn read_gyro(&mut self) -> Result<BmiData, I::Error> {
         let mut data = [0u8; 6];
         self.i2c.write_read(self.addr, &[0x0C], &mut data).await?;
@@ -91,7 +110,7 @@ where
         })
     }
 
-    /// Lit les données brutes de l'accéléromètre (registres 0x12 à 0x17).
+    /// Reads raw accelerometer data from registers `0x12` through `0x17`.
     pub async fn read_accel(&mut self) -> Result<BmiData, I::Error> {
         let mut data = [0u8; 6];
         self.i2c.write_read(self.addr, &[0x12], &mut data).await?;
