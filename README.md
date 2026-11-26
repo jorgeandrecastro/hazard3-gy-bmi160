@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/hazard3-gy-bmi160.svg)](https://crates.io/crates/hazard3-gy-bmi160)
 [![docs.rs](https://docs.rs/hazard3-gy-bmi160/badge.svg)](https://docs.rs/hazard3-gy-bmi160)
-[![License: GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20or%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
 
 Asynchronous `no_std` I2C driver for the Bosch BMI160 six-axis IMU. It reads raw
 accelerometer and gyroscope samples and works with any `embedded-hal-async` I2C
@@ -28,14 +28,14 @@ For RP2350 Hazard3 RISC-V, the default backend uses `hazard3-time` and
 
 ```toml
 [dependencies]
-hazard3-gy-bmi160 = "0.4"
+hazard3-gy-bmi160 = "0.5"
 ```
 
 For ARM/Cortex-M, disable the default backend and select Embassy:
 
 ```toml
 [dependencies]
-hazard3-gy-bmi160 = { version = "0.4", default-features = false, features = ["embassy"] }
+hazard3-gy-bmi160 = { version = "0.5", default-features = false, features = ["embassy"] }
 ```
 
 Select exactly one backend. The application must configure a compatible time
@@ -94,8 +94,16 @@ use their own channels or signals.
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
 
-## License
+## 🛡️ License
 
-Licensed under GPL-2.0-or-later.
+Licensed under either of:
 
-Copyright (C) 2026 Jorge Andre Castro
+    MIT license (http://opensource.org/licenses/MIT)
+
+    Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+
+at your option.
+
+## 🦅 About
+
+Developed by Jorge Andre Castro.
